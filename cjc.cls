@@ -133,6 +133,8 @@
 \RequirePackage[sort&compress]{natbib}
 \RequirePackage{url}
 \RequirePackage{etoolbox}
+\RequirePackage[hang,flushmargin]{footmisc} % remove indention in footnote
+\RequirePackage{1-in-2}
 
 % 对冲突的宏包报错。
 \RequirePackage{filehook}
@@ -840,7 +842,7 @@
     \fi
     % \thispagestyle{plain}\@thanks
     \thispagestyle{title}%
-    \class@title@footnote@main
+    % \class@title@footnote@main
   \endgroup
   \setcounter{footnote}{0}%
   \global\let\thanks\relax
@@ -1055,7 +1057,8 @@
 }
 
 % 标题页的脚注
-\newcommand\class@title@footnote@main{%
+%\newcommand\class@title@footnote@main{%
+\newcommand\classtitlefootnotemain{%
   \kv@set@family@handler{class@authors}{%
     \class@@correspondingfalse
     \kvsetkeys{class@author}{##2}%
@@ -1069,7 +1072,11 @@
       E-mail: \email{\class@@email}.
     \fi
   }%
+  
   \footnotetext{%
+    \par\noindent\rule{2in}{0.4pt}
+
+    \noindent
     收稿日期：\class@received@date ；%
     修改日期：\class@revised@date\quad
     \class@grants
@@ -1083,6 +1090,7 @@
   \kvsetkeys@expandafter{class@authors}{\class@authors}
   \ifx\class@@phone\@empty\else
     \footnotetext{%
+      %\parskip=0pt\parindent=0cm \\
       第1作者手机号码：\class@@phone，
       E-mail:
       \ifx\class@@email\@empty\else

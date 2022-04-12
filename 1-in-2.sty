@@ -1,0 +1,634 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 1[column output ]-in-2[column document].sty                       %
+%                      by bear@hashi1.civil.tohoku.ac.jp (2/9/1993) %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% FUNCTIONS added in "twocolumn"-"article" documents :
+%
+%    (1) footnotes by \thanks' are set in one-column
+%    (2) abstract and keywords are set below title in one-column
+%    (3) align bottom line of columns at the last page and put
+%        abstract below them in one-column
+%    (4) footnote of the \textwidth can be put at the left-column
+%        of arbitrary page
+%
+% without using "multicol.sty" (Current version of the "multicol.sty"
+%                                 does not support one-column float).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% A SAMPLE document is given below.
+%                      Cut out a portion after the line of \endinput.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SELECTION of these functions: (current status = all active)
+%
+\newif\if@thanksinonecolumn \@thanksinonecolumntrue
+% \@thanksinonecolumnfalse      % if you do NOT need the function No.1
+%
+\newif\if@abstractinonecolumn \@abstractinonecolumntrue
+% \@abstractinonecolumnfalse    % if you do NOT need the function No.2
+%
+\newif\if@lastpagecolumnalign \@lastpagecolumnaligntrue
+% \@lastpagecolumnalignfalse    % if you do NOT need the function No.3
+%
+\newif\if@widefootnote \@widefootnotetrue
+% \@widefootnotefalse           % if you do NOT need the function No.4
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% in order to check opened file
+\newif\if@fileforfootnote \@fileforfootnotefalse   % for function No.1
+%
+% defs, dimension and box used in functions No.1 and 4
+\let\@origin@lfootnoterule\footnoterule % original def of \footnoterule
+\let\@origin@lpar\par                   % original definition of \par
+\newdimen\@fullwidthfootnote \newsavebox{\@fullwdp@gebox}
+\newdimen\@fullwidthfootnotepage
+%
+% definition change of \par used in functions No.1 and 4
+\def\@pardefch@nge{\@setpar{%
+  \if@firstcolumn\@origin@lpar % original in the leftcolumn
+  \else \rightfootnotepage\@origin@lpar\fi}}
+%       ^^^^^ make a blank footnote and restore the original
+%               definition in the rightcolumn of the math-foot page
+%
+% change definition of \footnoterule used in functions No.1 and 4
+\def\footnoterule{\ifdim\c@page pt=\@fullwidthfootnotepage
+  \if@firstcolumn\kern-3\p@ \hrule width \textwidth \kern 2.6\p@
+   \else\null\fi            % ^^^^^ leftcolumn of the specified page
+%                                           rightcolumn of that page
+   \else\@origin@lfootnoterule\fi                        % otherwise
+ }
+%
+% force a blank footnote at the right-column used in functions No.1 and 4
+\def\rightfootnotepage{\@setpar{\@origin@lpar}% restore original
+ \ifdim\@fullwidthfootnote>\z@
+  \insert\footins{\footnotesize
+  \interlinepenalty\interfootnotelinepenalty
+  \splittopskip\footnotesep
+  \splitmaxdepth \dp\strutbox \floatingpenalty \@MM
+  \hsize\columnwidth \@parboxrestore
+  \vspace*{\@fullwidthfootnote}}\fi}
+%
+% insert a box in the footnote used in functions No.1 and 4
+\def\@makebigfootnote{\insert\footins{% \footnotesize
+  \interlinepenalty\interfootnotelinepenalty
+  \splittopskip\footnotesep
+  \splitmaxdepth \dp\strutbox \floatingpenalty \@MM
+  \hsize\textwidth \@parboxrestore
+  \usebox{\@fullwdp@gebox}}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\if@thanksinonecolumn % ============ FUNCTION No.1 ============
+%
+% change definition of \thanks to make a box
+%
+\def\thanks#1{\if@fileforfootnote\else
+ \global\newwrite\@titlefile \gdef\@titlename{\jobname.1@2 }%
+%    temporary file "\jobname.1@2" is used to store all the \thanks'
+ \immediate\openout\@titlefile\@titlename
+ \global\@fileforfootnotetrue\fi
+ \footnotemark{\let\protect\string\immediate\write\@titlefile{%
+ \string\item\string[\string\footnotemark\string]\space #1}}}
+%
+% making a footnote of the box of items by \thanks above
+% \@setthefirstpagefootnote is used in \def\maketitle below
+%                                        ^^^^^^^^^^^^^^^^
+\def\@setthefirstpagefootnote{\if@fileforfootnote
+ \immediate\closeout\@titlefile
+ \global\@fileforfootnotefalse
+ \@pardefch@nge % change definition of \par
+ \global\sbox{\@fullwdp@gebox}{% save them into a box
+ \begin{minipage}{\textwidth}%
+  \setcounter{footnote}{0} \def\thefootnote{\fnsymbol{footnote}}%
+   \def\@makefnmark{\hbox to\z@{$\m@th^{\@thefnmark}$\hss}}%
+  \begin{list}{}{\leftmargin=0.05\textwidth \rightmargin\leftmargin
+   \parsep=0pt \topsep=0pt \partopsep=0pt
+   \itemindent=0pt \itemsep=0pt \labelwidth=2ex \footnotesize}%
+    \input{\jobname.1@2}%
+  \end{list}%
+ \end{minipage}}\global\@fullwidthfootnotepage=\c@page pt%
+ \global\@fullwidthfootnote\ht\@fullwdp@gebox % set dimension
+ \global\advance\@fullwidthfootnote\dp\@fullwdp@gebox
+ \@makebigfootnote\fi} % and output it into one-column footnote
+%
+% \maketitle modified in case function No.2 is inactive
+%
+\if@abstractinonecolumn\else % \maketitle copied from article.sty
+ \def\maketitle{\par
+  \begingroup
+    \def\thefootnote{\fnsymbol{footnote}}%
+    \def\@makefnmark{\hbox
+        to\z@{$\m@th^{\@thefnmark}$\hss}}%
+    \if@twocolumn
+      \twocolumn[\@maketitle]%
+      \else \newpage
+      \global\@topnum\z@
+      \@maketitle \fi\thispagestyle{plain}\@thanks
+  \endgroup
+%
+  \@setthefirstpagefootnote % only for the footnote of the first page
+%
+  \setcounter{footnote}{0}%
+  \let\maketitle\relax
+  \let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\fi
+%
+\fi % ===========================================================
+%
+\if@abstractinonecolumn % ============ FUNCTION No.2 ============
+%
+%                \@setthefirstpagefootnote defined above is used
+%
+% define \abstract and \keywords
+%
+\def\abstract#1{\gdef\@abstract{#1}} % does NOT allow paragraphs
+\def\keywords#1{\gdef\@keywords{#1}}
+%
+% \def\institution#1{\gdef\@institution{#1}}    % if you need it
+%  if \institution is defined,
+%    uncomment corresponding lines of \maketitle and \@maketitle
+%
+% modify \maketitle
+%
+\def\maketitle{\par
+ \begingroup
+   \def\thefootnote{\fnsymbol{footnote}}%
+   \def\@makefnmark{\hbox
+       to\z@{$\m@th^{\@thefnmark}$\hss}}%
+   \if@twocolumn
+     \twocolumn[\@maketitle]%
+     \else \newpage
+     \global\@topnum\z@
+     \@maketitle \fi\thispagestyle{plain}\@thanks
+ \endgroup
+%
+% only when the function no.1 is active
+%
+ \if@thanksinonecolumn \@setthefirstpagefootnote \fi
+%
+ \setcounter{footnote}{0}%
+ \let\maketitle\relax
+ \let\@maketitle\relax
+% added
+ \gdef\@abstract{}\gdef\@keywords{} % \gdef\@institution{} % if defined
+%
+ \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+%
+% set layout of the actual \@maketitle suitable for one's need
+%
+\def\@maketitle{\newpage
+ \null
+ \vskip 1.5em
+ \begin{center}%
+  {\LARGE \@title \par}%
+  \vskip 1.5em
+  {\large
+   \lineskip .5em
+   \begin{tabular}[t]{c}\@author
+   \end{tabular}\par}%
+%  \vskip 1.5em    %
+%   \@institution  % if you need it
+ \end{center}%
+ \@ifundefined{@abstract}{}{%
+  \vskip 1.5em
+  \begin{list}{}{\setlength{\leftmargin}{0.15\textwidth}%
+   \listparindent=10pt \topsep=0pt \partopsep=0pt
+  \setlength{\rightmargin}{\leftmargin}}%
+    \item {\small\bf Abstract : \rm\@abstract}%
+    \@ifundefined{@keywords}{}{%
+    \item {\small\bf Key Words : \it\@keywords}}%
+  \end{list}}%
+ \par
+ \vskip 2.5em}
+%
+\fi % ===========================================================
+%
+\if@lastpagecolumnalign % ============ FUNCTION No.3 ============
+%
+\newdimen\lastp@geheight \lastp@geheight=10mm
+\newsavebox{\lastp@gebox}
+%
+% define \endabstract
+%
+\long\def\endabstract#1{\gdef\@endabstract{#1}} % permit paragraphs
+%
+% to create enough space of footnote to align columns of the last page
+%
+\def\lastpagecontrol{\@ifnextchar [{\l@stpagecontrol}%
+ {\l@stpagecontrol[\z@]}}
+%
+\def\l@stpagecontrol[#1]#2{\global\lastp@geheight=#2%
+%
+ \@ifundefined{maxsize}{}{\global\advance\maxsize-#2}% for supertab.sty
+%
+ \@ifundefined{@endabstract}{}{% save \endabstract in a box
+ \global\sbox{\lastp@gebox}{%
+  \begin{minipage}{\textwidth}\vspace*{#1}%
+   \hrule width \textwidth \vspace{1ex}%
+   \begin{list}{}{\setlength{\leftmargin}{0.15\textwidth}%
+    \listparindent=10pt \parsep=0pt
+    \topsep=0pt \partopsep=0pt
+   \setlength{\rightmargin}{\leftmargin}\small}%
+     \item \ignorespaces\hspace*{\listparindent}\ignorespaces
+                 \@endabstract
+   \end{list}%
+   \vspace{1ex} \hrule width \textwidth
+  \end{minipage}}}%
+%
+% insert footnote with abstract if enough room left
+%                 without abstract otherwise
+%
+  \@tempdima\ht\lastp@gebox \advance\@tempdima\dp\lastp@gebox
+ \ifdim\@tempdima>\lastp@geheight
+  \@tempdima\lastp@geheight \global\lastp@geheight=0pt
+ \else
+  \global\advance\lastp@geheight -\@tempdima
+  \@tempdima\lastp@geheight \global\lastp@geheight\textheight
+ \fi
+  \def\footnoterule{\null}% force it to \null at the last page
+  \insert\footins{\footnotesize
+  \interlinepenalty\interfootnotelinepenalty
+  \splittopskip\footnotesep
+  \splitmaxdepth \dp\strutbox \floatingpenalty \@MM
+  \hsize\textwidth \@parboxrestore
+   \ifdim\lastp@geheight=\z@\else\usebox{\lastp@gebox}\fi%
+  \vspace*{\@tempdima}}}
+%
+% set the layout of the last line of the document
+%
+\def\lastpagesettings{\@ifnextchar [{\l@stpagesettings}%
+ {\l@stpagesettings[\z@]}}
+%
+\def\l@stpagesettings[#1]{%
+ \begin{flushright}%
+  {\footnotesize(`{\tt\jobname.tex}'~~@~\today)}%
+ \end{flushright}%
+%
+% put \endabstract in the next page when no room left for it
+%
+ \ifdim\lastp@geheight=\z@
+  \onecolumn\null\vspace*{#1}\noindent\usebox{\lastp@gebox}%
+ \fi}
+%
+\fi % ===========================================================
+%
+\if@widefootnote % ================ FUNCTION No.4 ===============
+%
+\def\mathfootnote#1{%
+\def\footnoterule{} % remove line, add as \hrule in cjc.cls line 1075
+\setlength{\skip\footins}{-10pt}%
+% left-column OK
+\if@firstcolumn \@pardefch@nge % change \par and save argument in a box
+ \sbox{\@fullwdp@gebox}{\begin{minipage}{\textwidth} #1 \end{minipage}}%
+ \global\@fullwidthfootnotepage=\c@page pt%
+ \global\@fullwidthfootnote\ht\@fullwdp@gebox % set its width
+ \global\advance\@fullwidthfootnote\dp\@fullwdp@gebox
+ \@makebigfootnote % and output it into one-column footnote
+% right-column No good
+\else
+ #1\ignorespaces
+ \@warning{No `Wide-Footnote' in the right-column }\ignorespaces
+\fi}
+%
+\fi % ===========================================================
+%
+\endinput
+% --------------------- cut here --------- 8< -------------------
+%
+% sample is here : 1-in-2.tex
+%
+\documentstyle[twocolumn,1-in-2]{article}
+%
+\textwidth=420pt \textheight=600pt \columnsep=20pt
+\newcommand{\bs}{{\tt\symbol{'134}}}
+\newcommand{\fat}[1]{\mbox{\boldmath{$#1$}}}
+%
+\title{{\sc One-Column Abstract and Footnote \\
+               in the Two-Column Documents}\thanks{This is
+           a \protect\LaTeX\  footnote for the title of this article.}}
+%
+\author{{\sc an Author}\thanks{Institution of the first author,
+ Department of that institution. Full address for ordinary mailing
+ system. An {\bf\ e-mail} address at the end if any.}
+    \and {\sc another Author}\thanks{Work place of the second author.}}
+%
+%  \institution{University Somewhere} % if you need it
+%
+\abstract{% No blank line
+This is the main abstract.
+Four functions related to `{\tt onecolumn}' output are added
+in `{\tt twocolumn}' article.
+1) footnotes created by {\bs}{\tt thanks} are set in one-column format.
+2) abstract and keywords are put right below the author list in
+one-column format.
+3) the bottom of two columns at the last page is aligned so that
+some text such as abstract can be put below in one-column format.
+4) footnote of the textwidth can be set at any page.}
+%
+\keywords{two-column, one-column, maketitle, footnote}
+%
+\endabstract{% Yes blank line
+This is the part of abstract at the end.
+Four functions related to `{\tt onecolumn}' output are added
+in `{\tt twocolumn}' article.
+
+1) footnotes created by {\bs}{\tt thanks} are set in one-column format.
+2) abstract and keywords are put right below the author list in
+one-column format.
+3) the bottom of two columns at the last page is aligned so that
+some text such as abstract can be put below in one-column format.
+4) footnote of the textwidth can be set at any page.}
+%
+\begin{document}
+
+\maketitle
+
+\section{PROBLEM}
+
+As is often observed in the proceedings of engineering societies,
+the manuscript is written in two-column format. But at the end
+of the main body of the article, the abstract may be included in
+one-column format.
+Or, the abstract may be located at the beginning of the article,
+but is not in the left-column where
+the ordinary \verb+\begin{abstract}+ places the abstract.
+Key words are also listed right below the main title.
+
+Furthermore the footnotes about the title and authors are sometimes
+set in one-column form within the two-column document.
+It is easy to handle these kinds of outputs if one uses `multicol.sty'.
+However, this style file inhibits us from using `floats'
+within the column.
+
+\section{MODIFICATION}
+
+The one-column layout of abstract around the main title can be
+specified by changing the definition of \verb+\@maketitle+.
+Read the corresponding parts in the preamble of this document.
+
+If one needs the abstract right below the title, it can be defined
+by a command
+\begin{quote}\verb+\abstract{....}+\end{quote}
+where no blank line is permitted. If a couple of paragraphs are
+needed within the abstract, change the way of definition of
+\verb+\abstract+ to \verb+\long\def\abstract#1{...+.
+One must be careful in using \verb+\verb+ within
+\verb+\abstract+.
+\begin{figure}[h]
+\setlength{\unitlength}{1mm}
+\begin{center}\begin{picture}(50,20)(0,0)
+\framebox(50,20){{\sc Figure}}\end{picture}\end{center}
+\caption{One-Column Figure}
+\end{figure}
+
+Key words can be defined similarly by a command (
+\fbox{{\bs}{\tt rightfootnotepage}} may be put around here,
+only when necessary.)
+\begin{quote} \verb+\keywords{...}+ \end{quote}
+which will appear in italic. Both \verb+\abstract+ and \verb+\keywords+
+are not necessarily defined, but \verb+\keywords+ will be neglected
+if \verb+\abstract+ is not defined. Similarly one can add some other
+items there. An example using the \verb+\institution+ of the authors
+is given but is now commented out.% \rightfootnotepage %if needed
+
+\begin{table}[h]
+\setlength{\unitlength}{1mm}
+\begin{center}\begin{picture}(50,35)(0,0)
+\framebox(50,35){{\sc Table}}\end{picture}\end{center}
+\caption{One-Column Table}
+\end{table}
+
+The footnote with \verb+\textwidth+ at the first page can be
+inserted by the footnote command within \verb+\maketitle+ process,
+using a full-width box explained in the next section.
+The contents of the footnote are given by the ordinary command
+of \verb+\thanks+. When no footnote is necessary, omit \verb+\thanks+.
+Note that the definition of \verb+\thanks+ has been changed to set
+all items in a box, and that a temporary file named
+`\verb+\jobname.1@2+' is used there.
+If some \TeX\  commands are to be included within \verb+\thanks+,
+one must add \verb+\protect+ and \verb*+\ + before and after the
+string respectively;e.g.
+\begin{quote} \verb+\thanks{The {\protect\bf\ ...+ \end{quote}
+
+Since this footnote command creates only one footnote at the
+left-column of the first page, the footnote with the same height
+is needed at the right-column of the page. In order to set this
+blank footnote, the definition of \verb+\par+ is temporarily changed,
+so that the first \verb+\par+ at the right-column automatically
+creates such a footnote\footnote{Yes.
+This must be an ordinary footnote.}.
+
+If no paragraph-end appears in the right-column of
+the first page (it is not likely in the ordinary document),
+one must insert a line of
+\begin{quote} \verb+\rightfootnotepage+ \end{quote}
+{\em manually} at some place in that column in order to make a blank
+footnote and to restore the definition of \verb+\par+.
+
+Since the definition of \verb+\footnoterule+ has been changed
+for the output in the first page, no footnote can be given there
+if \verb+\thanks+\footnote{This is another footnote.
+The last page can never include ordinary footnotes.} is used.
+
+\begin{figure*}[htp]
+\begin{center}
+\setlength{\unitlength}{1mm}
+\begin{picture}(110,65)(0,0)
+\put(5,5){\thicklines\framebox(40,55){}}
+\put(60,5){\thicklines\framebox(40,55){}}
+\put(10,10){\dashbox{0.3}(13,45){}}
+\put(27,38){\dashbox{0.3}(13,17){}}
+\put(65,24){\dashbox{0.3}(13,31){}}
+\put(82,24){\dashbox{0.3}(13,31){}}
+\put(65,15){\dashbox{0.5}(30,7){ABSTRACT}}
+\put(5,60){\makebox(40,5){Last Page}}
+\put(60,60){\makebox(40,5){Last Page}}
+\put(5,0){\makebox(40,5){Before Control}}
+\put(60,0){\makebox(40,5){After Control}}
+\put(48,35){\vector(1,0){9}}
+\put(30,20){\vector(0,1){17}}
+\put(30,20){\vector(0,-1){10}}
+\put(66,15){\vector(0,1){7}}
+\put(66,15){\vector(0,-1){5}}
+\put(30,20){\makebox(15,5){16 cm}}
+\put(67,5){\makebox(25,10)[l]{8 cm}}
+\put(84,26){\makebox(13,5)[r]{\footnotesize {\tt \symbol{'134}lastpage-}}}
+\put(85,23){\makebox(13,5)[r]{\footnotesize {\tt settings}}}
+\put(29,40){\makebox(13,5)[r]{\footnotesize {\tt \symbol{'134}lastpage-}}}
+\put(30,37){\makebox(13,5)[r]{\footnotesize {\tt settings}}}
+\put(66,50){\makebox(13,5)[l]{\footnotesize {\tt \symbol{'134}lastpage-}}}
+\put(67,47){\makebox(13,5)[l]{\footnotesize {\tt control\{8cm\}}}}
+\put(28,50){\makebox(13,5)[l]{\footnotesize 4. END}}
+\put(83,36){\makebox(13,5)[l]{\footnotesize 4. END}}
+\end{picture}
+\caption{Control of the last page}\label{fig:last}
+\end{center}
+\end{figure*}
+
+\section{MATH}
+
+Similar procedure can yield any kind of footnotes of the width
+`\verb+\textwidth+' at the left-column of an arbitray page.
+Such a command will help us to write a long equation, such
+as a large size of matrices or an integral of some complicated
+and long integrand.
+
+For example, if one wants to write an equation as
+\mathfootnote{\begin{equation}
+\left\{\begin{array}{c} x \\ y \\ z \end{array}\right\}=
+\left(\begin{array}{ccc}
+ a+b/r                   & c-d/s  & e/f-g \\
+                         & h+k/t  & m/n+p \\
+ \multicolumn{2}{l}{\mbox{Symm.}} & q-u/v
+ \end{array}\right)
+\left\{\begin{array}{c} \alpha \\ \beta \\ \gamma \end{array}\right\}
+\end{equation}}
+it will yield `{\tt Overfull}' error.
+\typeout{^^J \space Remark:
+ The `Overfull \string\hbox' warning above is placed deliberately.^^J}%
+Since it is annoying to split long equations, it
+may be handy to use a float to put such a long equation.
+However, since all the floats are placed at the top of the page
+in two-column style, it may be better to put equations in the
+footnotes.
+
+Here a new command \verb+\mathfootnote{..}+ is defined.
+When this command with equations is placed in the left-column,
+it will output them in the footnote of the `\verb+\textwidth+'.
+It implies that the command won't work in the right-column and
+that it outputs an ordinary equation expression
+with `{\tt Overfull}' error just like an example above.
+
+The procedure is completely the same as that for \verb+\thanks+,
+but no temporary file is necessary. Namely when such a footnote
+is created in the left-column of a page, the first \verb+\par+
+in the right-column of that page will automatically yield
+a blank footnote there. However if no \verb+\par+ happens to
+appear in the right-column, one must put a line
+\begin{quote} \verb+\rightfootnotepage+ \end{quote}
+manually.
+Since this macro is completely the same as that for \verb+\thanks+,
+the command \verb+\mathfootnote+ can never be used in the first
+page when \verb+\thanks+ is defined.
+
+An example
+\begin{quote}\begin{verbatim}
+\mathfootnote{%
+ \begin{equation}
+ \left\{\begin{array}{c}
+  x \\ ...
+..........
+\end{equation}}
+\end{verbatim}\end{quote}
+will output an equation in the footnote of this page.
+\mathfootnote{\begin{equation}
+\left\{\begin{array}{c} x \\ y \\ z \end{array}\right\}=
+\left(\begin{array}{ccc}
+ a+b/r                   & c-d/s  & e/f-g \\
+                         & h+k/t  & m/n+p \\
+ \multicolumn{2}{l}{\mbox{Symm.}} & q-u/v
+ \end{array}\right)
+\left\{\begin{array}{c} \alpha \\ \beta \\ \gamma \end{array}\right\},
+\qquad\mbox{or}\qquad \fat{x}=\fat{C}\,\fat{\lambda}\label{eq:foot}
+\end{equation}}
+\begin{center} [Eq.(\ref{eq:foot}) is in the footnote.] \end{center}
+where $\alpha$ and $\cdots$.
+
+It must be pointed out that one may not always use this command
+\verb+\mathfootnote+ so successfully especially near the top of
+a new page or a new column.
+This is because the \verb+\if@firstcolumn+ is not properly set
+near there by some reason we cannot understand.
+We must say that this point is a bug of the macros defined here.
+
+\section{CHEATING}
+
+On the other hand, in order to circumvent the difficulty about
+the ending troubles within an ordinary `{\tt twocolumn}' article,
+one may use a `disguised footnote' at the last page.
+Namely if one inserts a footnote with certain amount of height at
+the left-column in the last page, both columns can be aligned bottom
+and a space comes out below them.
+The space created below may be occupied by the full-width box
+without getting any error-messages from \LaTeX.
+Naturally no footnote is permitted at the last page.
+
+\subsection{COMMANDS}
+
+Follow the steps below:
+\begin{enumerate}
+%
+\item The abstract to be put at the end can be defined
+ by \verb+\endabstract{...}+, although it is not necessary.
+%
+\item Put \verb+\lastpagesettings+ at the end of the document,
+ and compile it to get an output.
+%
+\item Measure the space below the ending line of the body of the
+ document.
+%
+\item Calculate the amount of spacing necessary to get two columns
+ at the end page aligned bottom; say, let this amount be {\tt 8 cm}.
+%
+\item Put \verb+\lastpagecontrol{8cm}+ at certain position in the
+ left-column of the last page.
+%
+\item Compile it, and try to adjust the height of space
+ until you are satisfied.
+%
+\end{enumerate}
+Simple explanation is given in {\bf Fig. \ref{fig:last}}.
+If no `ending abstract' is necessary at the end,
+omit \verb+\endabstract+.
+\lastpagecontrol[1em]{5cm}
+(We set \fbox{{\bs}{\tt lastpagecontrol}} around here.)
+
+\subsection{OPTIONS}
+
+Since the measurement of dimensions in these macros are not
+so precise that further adjustment may be necessary as an option.
+
+\subsubsection{OVERLAP}
+
+No matter how hard one calculates the size of spacing for the abstract,
+this style file may not give you any satisfactory adjustment.
+Especially when the right-column becomes longer than the left-column,
+it will overlap the portion of the abstract.
+In such a case, one can add a space above the abstract space as an
+option for the command \verb+\lastpagecontrol+ by
+\begin{quote}
+\verb+\lastpagecontrol[2cm]{8cm}+
+\end{quote}
+where the vertical spacing of {\tt 2cm} in the bracket will be
+added above the abstract, so that this overlap can be avoided.
+
+\subsubsection{PAGE BREAK}
+
+Although there seems to exist enough spacing for the abstract, the
+calculation within this simple style file may move this portion to
+the next page.
+In such a case, one can print out the last two pages on the same
+sheet of paper, if one adds extra space above the abstract part at
+the very last page as
+\begin{quote}
+\verb+\lastpagesettings[10cm]+
+\end{quote}
+where the optional space of height {\tt 10cm} will be added
+above the abstract.
+
+\section{SELECTION}
+
+You may need only one of these four functions defined in this
+style file. In order to select necessary functions out of these,
+four \verb+\if+'s are defined,
+\begin{itemize}
+\item \verb+\if@thanksinonecolumn+
+\item \verb+\if@abstractinonecolumn+
+\item \verb+\if@lastpagecolumnalign+
+\item \verb+\if@widefootnote+
+\end{itemize}
+so that select a suitable set
+of switches at the beginning of the style file `{\tt 1-in-2.sty}'.
+Or following steps controlled by these \verb+\if+'s, one can
+delete unnecessary lines.
+
+\lastpagesettings
+\end{document}
